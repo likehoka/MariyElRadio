@@ -3,51 +3,93 @@ package com.hoka.mariyelradio;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import com.arellomobile.mvp.MvpAppCompatActivity;
+import com.arellomobile.mvp.presenter.InjectPresenter;
+import com.hoka.mariyelradio.presenter.PresenterMainActivity;
+import com.hoka.mariyelradio.utils.RadioPlayer;
+import com.hoka.mariyelradio.view.IMainActivity;
+
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
-    Button b_play;
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
+
+public class MainActivity extends MvpAppCompatActivity implements IMainActivity {
+    @InjectPresenter
+    PresenterMainActivity mPresenterMainActivity;
+
+    RadioPlayer mRadioPlayer;
 
     MediaPlayer mediaPlayer;
+    Playertask mPlayertask;
 
     boolean prepared;
     boolean started = false;
     String stream = "http://radio.teleradio.info:8000/mari";
+    @BindView(R.id.play_button)
+    Button play_Button;
+    @BindView(R.id.stop_button)
+    Button stop_Button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        b_play = (Button) findViewById(R.id.button);
-        b_play.setEnabled(false);
-        b_play.setText("LOADING");
+        ButterKnife.bind(this);
+        play_Button.setEnabled(true);
         mediaPlayer = new MediaPlayer();
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
 
-        new Playertask().execute(stream);
+        //mRadioPlayer = new RadioPlayer(mediaPlayer);
+        //mRadioPlayer.execute(stream);
 
-        b_play.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (started) {
-                    started = false;
-                    mediaPlayer.pause();
-                    b_play.setText("PLAY");
-                } else {
-                    started = true;
-                    mediaPlayer.start();
-                    b_play.setText("PAUSE");
-
-                }
-            }
-        });
+        mPlayertask = new Playertask();
+        mPlayertask.cancel(true);
+        mPlayertask.execute(stream);
     }
+
+    @Override
+    public void playRadio() {
+
+        //mRadioPlayer.execute(stream);
+        if (started) {
+            mediaPlayer.start();
+            started = false;
+        }
+        mPresenterMainActivity.clearStatus();
+    }
+
+    @Override
+    public void stopRadio() {
+
+        if (!started) {
+            mediaPlayer.pause();
+            started = true;
+        }
+        mPresenterMainActivity.clearStatus();
+    }
+
+    @Override
+    public void clearStatus() {
+    }
+
+    @OnClick({R.id.play_button, R.id.stop_button})
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.play_button:
+                mPresenterMainActivity.playRadio();
+                break;
+            case R.id.stop_button:
+                mPresenterMainActivity.stopRadio();
+                break;
+        }
+    }
+
 
     class Playertask extends AsyncTask<String, Void, Boolean> {
 
@@ -68,10 +110,11 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Boolean aBoolean) {
             super.onPostExecute(aBoolean);
             mediaPlayer.start();
-            b_play.setEnabled(true);
-            b_play.setText("PLAY");
+            //b_play.setEnabled(true);
+            //b_play.setText("PLAY");
         }
     }
+    /*
 
     @Override
     protected void onPause() {
@@ -95,5 +138,5 @@ public class MainActivity extends AppCompatActivity {
         if (prepared) {
             mediaPlayer.release();
         }
-    }
+    } */
 }
